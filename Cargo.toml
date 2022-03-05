@@ -1,0 +1,33 @@
+[package]
+name = "zero2prod"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.0.1"
+actix-http = "3.0.1"
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0.79"
+config = "0.11.0"
+
+[dependencies.sqlx]
+version = "0.5.11"
+default-features = false
+features = [
+    "postgres",
+    "uuid", # Mapping SQL UUID to Rust UUID
+    "chrono", #For mapping timestampz
+    "migrate", # Manage migrates
+    "macros", # Gives us access to sqlx::query
+    "runtime-actix-rustls" # use actix runtime for its futures and TLS backed
+]
+
+[dev-dependencies]
+actix-rt = "2"
+reqwest = "0.11"
+tokio = "1"
