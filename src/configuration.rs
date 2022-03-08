@@ -94,6 +94,7 @@ impl DatabaseSettings {
         self.without_db()
             .database(&self.database_name)
             .log_statements(log::LevelFilter::Trace)
+            .to_owned()
     }
 
     pub fn without_db(&self) -> PgConnectOptions {
