@@ -19,14 +19,14 @@ pub struct TestApp {
 #[actix_rt::test]
 async fn health_check_works() {
     // Arrange
-    let address = spawn_app().await;
+    let app = spawn_app().await;
 
     //     Use reqwest
     let client = reqwest::Client::new();
 
     // Act
     let response = client
-        .get(&format!("{}/health_check", &address))
+        .get(&format!("{}/health_check", &app.address))
         .send()
         .await
         .expect("Failed to execute the request");
@@ -52,7 +52,7 @@ static TRACING: Lazy<()> = Lazy::new(|| {
 // Spawn app
 // Spins up an instance of our application and returns its address
 
-async fn spawn_app() -> String {
+async fn spawn_app() -> TestApp {
     // The first time initialize is invoked the code in TRACING is executed.
     // All other invocations will instead skip execution
     Lazy::force(&TRACING);
@@ -78,29 +78,23 @@ async fn spawn_app() -> String {
     TestApp {
         address,
         db_pool: connection_pool,
-    };
-    format!("http://127.0.0.1:{}", port)
+    }
 }
 
 #[actix_rt::test]
 async fn subscribe_returns_a_200_for_valid_form_data() {
     // Arrange
-    let app_address = spawn_app().await;
+    let app = spawn_app().await;
 
     // Load config file
     let configuration = get_configuration().expect("Failed to load configuraion file");
-    // Connection string
-    let connection_string = configuration.database.connection_string();
-    // Connection
-    let mut connection = PgConnection::connect(&connection_string)
-        .await
-        .expect("Failed to connect to postgres");
+
     let client = reqwest::Client::new();
     let body = "name=le%20guin&email=ursula_le_guin%40gmail.com";
 
     // Act
     let response = client
-        .post(&format!("{}/subscription", &app_address))
+        .post(&format!("{}/subscription", &app.address))
         .header("Content-Type", "application/x-www-form-urlencoded")
         .body(body)
         .send()
@@ -111,7 +105,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
     assert_eq!(200, response.status().as_u16());
 
     let saved = sqlx::query!("SELECT email, name FROM subscriptions")
-        .fetch_one(&mut connection)
+        .fetch_one(&app.db_pool)
         .await
         .expect("Failed to fetch saved subscription.");
     assert_eq!(saved.email, "ursula_le_guin@gmail.com");
@@ -122,7 +116,7 @@ async fn subscribe_returns_a_200_for_valid_form_data() {
 #[actix_rt::test]
 async fn subscribe_returns_a_400_when_data_is_missing() {
     // Arrange
-    let app_address = spawn_app().await;
+    let app = spawn_app().await;
     let client = reqwest::Client::new();
     let test_cases = vec![
         ("name=le%20guin", "Missing the email"),
@@ -132,7 +126,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
     for (invalid_body, error_message) in test_cases {
         // Act
         let response = client
-            .post(&format!("{}/subscription", &app_address))
+            .post(&format!("{}/subscription", &app.address))
             .header("Content-Type", "application/x-www-form-urlencoded")
             .body(invalid_body)
             .send()
@@ -150,8 +144,7 @@ async fn subscribe_returns_a_400_when_data_is_missing() {
 
 pub async fn configure_db(config: &DatabaseSettings) -> PgPool {
     // Create a database
-    let connection_string = config.connection_string_without_db();
-    let mut connection = PgConnection::connect(&connection_string)
+    let mut connection = PgConnection::connect_with(&config.without_db())
         .await
         .expect("Failed to connect to the database");
     // Create a database
@@ -161,7 +154,7 @@ pub async fn configure_db(config: &DatabaseSettings) -> PgPool {
         .expect("Failed to create database");
 
     //
-    let connection_pool = PgPool::connect(&config.connection_string())
+    let connection_pool = PgPool::connect_with(config.with_db())
         .await
         .expect("Failed to connect to the database");
 
