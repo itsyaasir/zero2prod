@@ -1,4 +1,4 @@
-use sqlx::{postgres::PgPoolOptions};
+use sqlx::postgres::PgPoolOptions;
 use std::net::TcpListener;
 
 use zero2prod::{

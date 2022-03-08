@@ -1,7 +1,5 @@
 use actix_web::{web, HttpResponse};
-use chrono::Utc;
 use sqlx::PgPool;
-use uuid::Uuid;
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct FormData {
     pub email: String,
@@ -37,10 +35,10 @@ pub async fn insert_subscriber(pool: &PgPool, form: &FormData) -> Result<(), sql
         r#"
         INSERT INTO subscriptions(id, email, name, subscribed_at) VALUES ($1, $2, $3, $4)
         "#,
-        Uuid::new_v4(),
+        uuid::Uuid::new_v4(),
         form.email,
         form.name,
-        Utc::now()
+        chrono::Utc::now()
     )
     .execute(pool)
     .await
