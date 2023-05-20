@@ -9,37 +9,48 @@ path = "src/lib.rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-actix-web = "4.0.1"
-actix-http = "3.0.1"
-serde = {version = "1.0", features = ["derive"]}
-serde_json = "1.0.79"
-config = "0.11.0"
-chrono = "0.4.19"
-uuid = { version = "0.8.2" , features= ["v4"]}
-tracing = {version = "0.1.31", features=["log"]}
-tracing-futures = "0.2.5"
-tracing-subscriber = {version = "0.3.9", features=["registry","env-filter"]}
+actix-web = "4.3"
+actix-http = "3.3"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+config = "0.13"
+chrono = "0.4"
+uuid = { version = "1.3", features = ["v4"] }
+tracing = { version = "0.1", features = ["log"] }
+tracing-futures = "0.2"
+tracing-subscriber = { version = "0.3", features = ["registry", "env-filter"] }
 tracing-bunyan-formatter = "0.3.2"
 tracing-log = "0.1.2"
-tracing-actix-web = "0.5.1"
-serde-aux = "3.0.1"
-log = "0.4.14"
+tracing-actix-web = "0.7"
+serde-aux = "4.2"
+log = "0.4"
+unicode-segmentation = "1.9.0"
+validator = "0.16.0"
+reqwest = { version = "0.11", features = [
+    "rustls-tls",
+    "json",
+], default-features = false }
+
 
 [dependencies.sqlx]
-version = "0.5.11"
+version = "0.6"
 default-features = false
 features = [
     "postgres",
-    "uuid", # Mapping SQL UUID to Rust UUID
-    "chrono", #For mapping timestampz
-    "migrate", # Manage migrates
-    "macros", # Gives us access to sqlx::query
+    "uuid",                 # Mapping SQL UUID to Rust UUID
+    "chrono",               #For mapping timestampz
+    "migrate",              # Manage migrates
+    "macros",               # Gives us access to sqlx::query
     "runtime-actix-rustls", # use actix runtime for its futures and TLS backed
-    "offline" 
+    "offline",
 ]
 
 [dev-dependencies]
-actix-rt = "2"
+actix-rt = "2.8"
+claim = "0.5.0"
+fake = "2.3.0"
 once_cell = "1.10.0"
-reqwest = "0.11"
-tokio = "1"
+quickcheck = "1.0"
+quickcheck_macros = "1.0"
+tokio = { version = "1", features = ["rt", "macros"] }
+wiremock = "0.5"

@@ -3,12 +3,31 @@ use sqlx::{
     postgres::{PgConnectOptions, PgSslMode},
     ConnectOptions,
 };
+
+use crate::domain::SubscriberEmail;
 #[derive(serde::Deserialize)]
 pub struct Settings {
     pub database: DatabaseSettings,
     pub application: ApplicationSettings,
+    pub email_client: EmailClientSettings,
+}
+#[derive(Debug, serde::Deserialize)]
+pub struct EmailClientSettings {
+    pub base_url: String,
+    pub sender_email: String,
+    pub authorization_token: String,
+    pub timeout_millis: u64,
 }
 
+impl EmailClientSettings {
+    pub fn sender(&self) -> Result<SubscriberEmail, String> {
+        SubscriberEmail::parse(self.sender_email.clone())
+    }
+
+    pub fn timeout(&self) -> std::time::Duration {
+        std::time::Duration::from_millis(self.timeout_millis)
+    }
+}
 #[derive(serde::Deserialize)]
 pub struct ApplicationSettings {
     pub host: String,
@@ -29,34 +48,33 @@ pub struct DatabaseSettings {
 
 // get configuration
 pub fn get_configuration() -> Result<Settings, config::ConfigError> {
-    // Initialise our config reader
-    let mut settings = config::Config::default();
-
     //
-    let base_path = std::env::current_dir().expect("Failed to determine the current directroy");
+    let base_path = std::env::current_dir().expect("Failed to determine the current directory");
     //
     let configuration_directory = base_path.join("configuration");
 
-    // Add config values from a file name configuration
-    // It will look for any top level file with an extension
-    // That config knows how to paste: yaml, json etc
-    settings.merge(config::File::from(configuration_directory.join("base")).required(true))?;
-    // Detect the running environemnt
+    // Detect the running environment
     let environment: Environment = std::env::var("APP_ENVIRONMENT")
         .unwrap_or_else(|_| "local".into())
         .try_into()
-        .expect("Failed to parse APP_ENVIRONEMNT");
+        .expect("Failed to parse APP_ENVIRONMENT");
 
-    // Layer on env-specific values
-    settings.merge(
-        config::File::from(configuration_directory.join(environment.as_str())).required(true),
-    )?;
+    // Initialise our config reader
+    let settings = config::Config::builder()
+        // Add config values from a file name configuration
+        // It will look for any top level file with an extension
+        // That config knows how to paste: yaml, json etc
+        .add_source(config::File::from(configuration_directory.join("base")).required(true))
+        // Layer on env-specific values
+        .add_source(
+            config::File::from(configuration_directory.join(environment.as_str())).required(true),
+        )
+        // Add in settings from environment variables (with a prefix of APP and "__" as a separator)
+        // E.g "APP_APPLICATION_PORT =5001 would set `Settings.application.port`"
+        .add_source(config::Environment::with_prefix("app").separator("__"))
+        .build()?;
 
-    // Add in settings from environment variables (with a prefix of APP and "__" as a separator)
-    // E.g "APP_APPLICATION_PORT =5001 would set `Settings.application.port`"
-    settings.merge(config::Environment::with_prefix("app").separator("__"))?;
-    //Try to convert the config values
-    settings.try_into()
+    settings.try_deserialize::<Settings>()
 }
 
 // Possible runtime environment for our application
